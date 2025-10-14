@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>PERANCANGAN SISTEM E-COMMERCE - BORU REGAR</title>
+  <style>
+    :root{--accent:#1e88e5;--muted:#666}
+    *{box-sizing:border-box}
+    body{font-family:Inter, system-ui, Arial, sans-serif;margin:0;background:#f5f7fb;color:#102a43}
+    header{background:linear-gradient(90deg,var(--accent),#2bb673);color:white;padding:18px 20px;display:flex;align-items:center;justify-content:space-between}
+    header h1{font-size:18px;margin:0}
+    header .actions{display:flex;gap:8px;align-items:center}
+    .container{max-width:1100px;margin:22px auto;padding:0 18px}
+    .grid{display:grid;grid-template-columns:280px 1fr;gap:18px}
+
+    .card{background:white;border-radius:12px;padding:14px;box-shadow:0 6px 18px rgba(16,42,67,0.06)}
+    button{background:var(--accent);color:white;padding:10px 12px;border-radius:8px;border:0;cursor:pointer}
+    button.ghost{background:transparent;color:var(--accent);border:1px solid rgba(255,255,255,0.18)}
+
+    .product-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px}
+    .product{background:white;border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:8px}
+    .product img{width:100%;height:150px;object-fit:cover;border-radius:8px}
+    .price{font-weight:700}
+    .muted{color:var(--muted);font-size:13px}
+
+    .cart-btn{position:relative}
+    .badge{position:absolute;top:-6px;right:-6px;background:#ff5252;color:white;border-radius:999px;padding:4px 7px;font-size:12px}
+    .drawer{position:fixed;right:18px;top:80px;width:360px;max-height:70vh;background:white;border-radius:12px;box-shadow:0 20px 50px rgba(2,6,23,0.2);overflow:auto;padding:14px;display:none}
+    .drawer.open{display:block}
+    .cart-item{display:flex;gap:12px;align-items:center;margin-bottom:10px}
+    .cart-item img{width:64px;height:64px;object-fit:cover;border-radius:6px}
+
+    footer{margin:30px 0;text-align:center;color:var(--muted);font-size:13px}
+
+    @media(max-width:900px){
+      .grid{grid-template-columns:1fr;}
+      .drawer{right:10px;left:10px;width:auto}
+    }
+
+    .space-between{display:flex;justify-content:space-between;align-items:center}
+
+    .modal-backdrop{position:fixed;inset:0;background:rgba(2,6,23,0.45);display:none;align-items:center;justify-content:center}
+    .modal-backdrop.open{display:flex}
+    .modal{background:white;padding:18px;border-radius:12px;min-width:320px}
+    .btn-link{background:none;border:none;color:var(--accent);cursor:pointer;padding:0}
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Pisang Barangan Boru Regar</h1>
+    <div class="actions">
+      <div class="muted" id="welcome">Selamat datang, Tamu</div>
+      <button id="loginBtn">Login</button>
+      <button class="cart-btn" id="openCart">Keranjang <span class="badge" id="cartCount">0</span></button>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="grid">
+      <aside>
+        <div class="card">
+          <h3>Tentang Kami</h3>
+          <p class="muted">Toko Pisang Barangan Boru Regar berdiri sejak tahun 2019 sebelum adanya Corona Virus di Indonesia, Pisang Barangan ini berasal dari Medan dan rasanya manis.</p>
+        </div>
+      </aside>
+
+      <section>
+        <div class="card space-between" style="margin-bottom:12px">
+          <div>
+            <strong>Daftar Produk</strong>
+            <div class="muted">Menampilkan produk Pisang Barangan Boru Regar</div>
+          </div>
+        </div>
+        <div id="products" class="product-list"></div>
+      </section>
+    </div>
+  </main>
+
+  <!-- Drawer Keranjang -->
+  <div id="cartDrawer" class="drawer">
+    <div class="space-between"><h3>Keranjang Anda</h3><button id="closeCart">Tutup</button></div>
+    <div id="cartItems"></div>
+    <div class="space-between" style="margin-top:10px">
+      <div>
+        <div class="muted">Total:</div>
+        <div id="cartTotal" style="font-size:18px;font-weight:700">Rp0</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <button id="checkoutBtn">Checkout</button>
+        <button id="clearCartBtn" style="background:#ff5252">Kosongkan</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Login -->
+  <div id="modal" class="modal-backdrop">
+    <div class="modal">
+      <h3 id="modalTitle">Login</h3>
+      <input type="text" id="email" placeholder="email" style="width:100%;padding:10px;margin-bottom:8px">
+      <input type="password" id="pwd" placeholder="password" style="width:100%;padding:10px;margin-bottom:8px">
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button id="loginSubmit">Masuk</button>
+        <button id="createAccountBtn" class="btn-link">Buat Akun</button>
+        <button id="closeModal" class="btn-link">Batal</button>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <small>Pisang Barangan asli Medan</small>
+  </footer>
+
+  <script>
+    const PRODUCTS = [
+      {id:1,name:'Pisang Barangan Kecil',price:15000,img:'pisang barangan ukuran kecil.jpeg',desc:'Pisang Barangan ukuran kecil segar dan manis.'},
+      {id:2,name:'Pisang Barangan Sedang',price:20000,img:'pisang barangan ukuran sedang.jpeg',desc:'Ukuran sedang, cocok untuk konsumsi harian.'},
+      {id:3,name:'Pisang Barangan Besar',price:25000,img:'pisang barangan ukuran besar.jpeg',desc:'Ukuran besar, ideal untuk oleh-oleh.'}
+    ];
+
+    const CART_KEY='ecom_cart',USER_KEY='ecom_user',USER_LIST_KEY='ecom_users';
+    const $=id=>document.getElementById(id);
+    const formatRp=n=>'Rp'+Number(n).toLocaleString('id-ID');
+
+    function loadCart(){try{return JSON.parse(localStorage.getItem(CART_KEY))||[]}catch(e){return[]}}
+    function saveCart(c){localStorage.setItem(CART_KEY,JSON.stringify(c));updateCartUI();}
+    function clearCart(){localStorage.removeItem(CART_KEY);updateCartUI();}
+    function getUser(){try{return JSON.parse(localStorage.getItem(USER_KEY));}catch(e){return null}}
+    function setUser(u){localStorage.setItem(USER_KEY,JSON.stringify(u));updateUserUI();}
+
+    // daftar user tersimpan lokal
+    function getUserList(){try{return JSON.parse(localStorage.getItem(USER_LIST_KEY))||[]}catch(e){return[]}}
+    function saveUserList(list){localStorage.setItem(USER_LIST_KEY,JSON.stringify(list));}
+
+    function renderProducts(list=PRODUCTS){
+      const wrap=$('products');wrap.innerHTML='';
+      list.forEach(p=>{
+        const el=document.createElement('div');el.className='product';
+        el.innerHTML=`
+          <img src="${p.img}" alt="${p.name}" />
+          <strong>${p.name}</strong>
+          <div class="price">${formatRp(p.price)}</div>
+          <div class="muted">${p.desc}</div>
+          <button onclick="addToCart(${p.id})">Tambah ke Keranjang</button>
+        `;
+        wrap.appendChild(el);
+      });
+    }
+
+    function addToCart(id){
+      const cart=loadCart();
+      const item=cart.find(x=>x.id===id);
+      if(item)item.qty++;else{const p=PRODUCTS.find(x=>x.id===id);cart.push({...p,qty:1});}
+      saveCart(cart);
+      openCartDrawer();
+    }
+
+    function updateCartUI(){
+      const items=loadCart();
+      $('cartCount').textContent=items.reduce((s,i)=>s+i.qty,0);
+      const wrap=$('cartItems');wrap.innerHTML='';
+      let total=0;
+      items.forEach(i=>{
+        total+=i.price*i.qty;
+        const d=document.createElement('div');d.className='cart-item';
+        d.innerHTML=`<img src="${i.img}"/><div style="flex:1"><strong>${i.name}</strong><div class="muted">${formatRp(i.price)} x ${i.qty}</div></div>`;
+        wrap.appendChild(d);
+      });
+      $('cartTotal').textContent=formatRp(total);
+    }
+
+    function openCartDrawer(){$('cartDrawer').classList.add('open');}
+    function closeCartDrawer(){$('cartDrawer').classList.remove('open');}
+
+    function updateUserUI(){
+      const u=getUser();
+      if(u){$('welcome').textContent='Halo, '+u.name;$('loginBtn').textContent='Logout';}
+      else{$('welcome').textContent='Selamat datang, Tamu';$('loginBtn').textContent='Login';}
+    }
+
+    function attemptLogin(){
+      const email=$('email').value.trim(),pwd=$('pwd').value.trim();
+      const users=getUserList();
+      const found=users.find(u=>u.email===email && u.password===pwd);
+      if(found){
+        setUser({name:found.name,email});
+        $('modal').classList.remove('open');
+        alert('Login berhasil!');
+      }else alert('Login gagal! Periksa email dan password Anda.');
+    }
+
+    function createAccount(){
+      const email=$('email').value.trim(),pwd=$('pwd').value.trim();
+      if(!email || !pwd) return alert('Isi email dan password terlebih dahulu.');
+      const users=getUserList();
+      if(users.some(u=>u.email===email)) return alert('Email sudah terdaftar.');
+      users.push({name:email.split('@')[0],email,password:pwd});
+      saveUserList(users);
+      alert('Akun berhasil dibuat! Silakan login.');
+      $('modalTitle').textContent='Login';
+    }
+
+    function checkout(){
+      const cart=loadCart();if(cart.length===0)return alert('Keranjang kosong');
+      alert('Checkout berhasil! Total '+formatRp(cart.reduce((s,i)=>s+i.price*i.qty,0)));
+      clearCart();
+    }
+
+    document.addEventListener('DOMContentLoaded',()=>{
+      renderProducts();updateCartUI();updateUserUI();
+      $('openCart').onclick=openCartDrawer;
+      $('closeCart').onclick=closeCartDrawer;
+      $('clearCartBtn').onclick=()=>{if(confirm('Kosongkan keranjang?'))clearCart();}
+      $('checkoutBtn').onclick=checkout;
+
+      $('loginBtn').onclick=()=>{
+        if(getUser()){localStorage.removeItem(USER_KEY);updateUserUI();alert('Logout berhasil');}
+        else {$('modal').classList.add('open');$('modalTitle').textContent='Login';}
+      };
+      $('closeModal').onclick=()=>$('modal').classList.remove('open');
+      $('loginSubmit').onclick=attemptLogin;
+      $('createAccountBtn').onclick=createAccount;
+    });
+  </script>
+</body>
+</html>
